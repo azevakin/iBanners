@@ -1,135 +1,87 @@
 # -*- coding: utf-8 -*-
-from django.db import models
-from django.contrib.sites.models import Site
-from settings import MEDIA_ROOT, MEDIA_URL
 
-BANNERS_TYPE = (
+from django.db import models
+from datetime import datetime as dt
+
+BANNERS_TYPES = (
    ('g',u'графический баннер'),
    ('f',u'Flash-баннер'),
    ('h',u'HTML-баннер'),
 )
 
-
-PRIORITY = (
-   (10,u'Эксклюзивный'),
-   (9,u'Максимально высокий'),
-   (8,u'Очень высокий'),
-   (7,u'Высокий'),
-   (6,u'Выше среднего'),
-   (5,u'Средний'),
-   (4,u'Ниже среднего'),
-   (3,u'Низкий'),
-   (2,u'Очень низкий'),
-   (1,u'Максимально низкий'),
-   (0,u'Собственные кампании'),
-)
-
 class Zone(models.Model):
-   site = models.ForeignKey(Site,verbose_name=u"сайт",)
-   name = models.CharField(max_length=50,verbose_name=u"название")
-   description = models.CharField(max_length=255,verbose_name=u"описание")
-   price = models.IntegerField(verbose_name=u"Цена месяца показа")
-   html_after_banner = models.CharField(max_length=255,verbose_name=u"HTML после баннера",blank=True,default="")
-   html_pre_banner = models.CharField(max_length=255,verbose_name=u"HTML перед баннером",blank=True,default="")
+    name = models.CharField(u"название", max_length=255, blank=False, null=False)
+    english_name = models.CharField(u"название по-английски", max_length=255, blank=False, null=False)
+    html_pre_banner = models.CharField(u"HTML перед баннером", max_length=255,blank=True, default="")
+    html_after_banner = models.CharField(u"HTML после баннера", max_length=255, blank=True, default="")
 
-   class Meta:
-      ordering = ["site","id"]
-      verbose_name = u"""зона"""
-      verbose_name_plural = u"""зоны"""
+    class Meta(object):
+        verbose_name = u"зона"
+        verbose_name_plural = u"зоны"
+        ordering = ["name"]
 
-   def get_site(self):
-      return u"%s [%s]" % (self.site.name, self.site)
-   get_site.short_description = u'Сайт'
-
-   def __unicode__(self):
-      return u"%s: %s %s" % (self.site.name, self.name, self.description)
-
-class Client(models.Model):
-   name = models.CharField(max_length=100,verbose_name=u"Имя")
-   contact = models.CharField(max_length=100,verbose_name=u"Контакт")
-   email = models.EmailField(max_length=100,verbose_name=u"E-mail")
-   one_banner_per_page = models.BooleanField(default=True,blank=True,verbose_name=u"Показывать только один баннер этого рекламодателя на странице")
-
-   class Meta:
-      ordering = ["name",]
-      verbose_name = u"""клиент"""
-      verbose_name_plural = u"""клиенты"""
-
-   def __unicode__(self):
-      return self.name
-
-class Campaign(models.Model):
-   client = models.ForeignKey(Client,verbose_name=u"Клиент")
-   name = models.CharField(max_length=100,verbose_name=u"Название")
-   begin_date = models.DateTimeField(verbose_name=u"Дата активации",null=True,blank=True,help_text=u"Оставьте поле пустым, чтобы немедленно активировать кампанию")
-   end_date = models.DateTimeField(verbose_name=u"Дата деактивации",null=True,blank=True,help_text=u"Оставьте поле пустым, чтобы кампания была активна всегда")
-   priority = models.IntegerField(verbose_name=u"Приоритет",choices=PRIORITY)
-
-   class Meta:
-      ordering = ["client__name", "name",]
-      verbose_name = u"""кампания"""
-      verbose_name_plural = u"""кампания"""
-
-   def __unicode__(self):
-      return u"%s - %s" % (self.client.name, self.name)
+    def __unicode__(self):
+        return self.name
 
 class Banner(models.Model):
-   campaign = models.ForeignKey(Campaign,verbose_name=u"Кампания")
-   zones = models.ManyToManyField(Zone,verbose_name=u"Связанные зоны")
-   banner_type = models.CharField(max_length=1,verbose_name=u"Тип баннера",choices=BANNERS_TYPE)
-   name = models.CharField(max_length=100,blank=False,verbose_name=u"Название")
-   foreign_url = models.CharField(max_length=200,blank=True,verbose_name=u"URL перехода",default="") # Внешний URL куда ведет баннер
-   width = models.CharField(
-      blank=True, default="", null=False, verbose_name=u"Ширина",max_length=100, help_text=u"После значения указывайте единицы, например px или %")
-   height = models.CharField(
-      blank=True, null=False, default="",verbose_name=u"Высота",max_length=100, help_text=u"После значения указывайте единицы, например px или %")
-   # Статистика
-   clicks = models.PositiveIntegerField(blank=True,verbose_name=u"Кликов",default=0) # Число кликов
-   shows  = models.PositiveIntegerField(blank=True,verbose_name=u"Показов",default=0) # Число показов
-   # Ограничения
-   max_clicks = models.PositiveIntegerField(blank=True,verbose_name=u"Лимит кликов", default=0, null=False, help_text=u"0 - лимит не ограничен")
-   max_shows  = models.PositiveIntegerField(blank=True,verbose_name=u"Лимит показов",default=0,null=False,help_text=u"0 - лимит не ограничен")
-   begin_date = models.DateTimeField(null=True,blank=True,verbose_name=u"Дата начала")
-   end_date = models.DateTimeField(null=True,blank=True,verbose_name=u"Дата окончания")
-   # Прорабатываем баннеры
-   swf_file = models.FileField(upload_to=MEDIA_ROOT+"/ibas/swf/",blank=True,verbose_name=u"Путь до SWF файла",help_text=u"Только для Flash баннеров",null=True)
-   img_file = models.FileField(upload_to=MEDIA_ROOT+"/ibas/img/",blank=True,verbose_name=u"Путь до графического файла",help_text=u"Использовать для графических баннеров и для замены Flash баннеров в случае отсутствия у пользователя flash-плеера",null=True)
-   alt = models.CharField(max_length=100,blank=True,verbose_name=u"alt текст",default="")
-   comment = models.TextField(max_length=255,blank=True,verbose_name=u"Комментарий",default="")
-   html_text = models.TextField(blank=True,null=False,default="",verbose_name=u"HTML текст")
-   var = models.CharField(max_length=255,verbose_name=u"Переменная",blank=True,default="",null=True)
+    name = models.CharField(u"название", max_length=255, null=False, blank=False)
+    banner_type = models.CharField(u"Тип баннера", max_length=1, choices=BANNERS_TYPES)
 
-   class Meta:
-      ordering = ["campaign__client__name",]
-      verbose_name = u"""баннер"""
-      verbose_name_plural = u"""баннеры"""
+    foreign_url = models.CharField(max_length=200,blank=True,verbose_name=u"URL перехода",default="") # Внешний URL куда ведет баннер
+    width = models.CharField(u"Ширина", blank=True, default="", null=False, max_length=100, help_text=u"После значения указывайте единицы, например 100px или 30%")
+    height = models.CharField(u"Высота", blank=True, null=False, default="", max_length=100, help_text=u"После значения указывайте единицы, например 100px или 30%")
 
-   def get_size(self):
-      return u"%sx%s" % (self.width, self.height)
-   get_size.short_description = u'Размеры'
+    # Прорабатываем баннеры
+    swf_file = models.FileField(u"SWF файл", upload_to="ibas/swf", blank=True, help_text=u"Только для Flash баннеров", null=True)
+    img_file = models.FileField(u"Изображение", upload_to="ibas/img", blank=True, help_text=u"Использовать для графических баннеров",null=True)
+    html_text = models.TextField(u"HTML текст", blank=True, null=False, default="")
 
-   def get_banner_zones(self):
-      htzones = "<ul>"
-      for zone in self.zones.all():
-         htzones += "<li>%s [%s] - %s</li>" % (zone.site, zone.name, zone.description)
-      htzones += "</ul>"
-      return htzones
-   get_banner_zones.short_description = u'Зоны'
-   get_banner_zones.allow_tags = True
+    class Meta(object):
+        verbose_name = u"баннер"
+        verbose_name_plural = u"баннеры"
+        ordering = ["name"]
 
-   def get_campaign_satus(self):
-      print dir(self.campaign)
-      return "%s - %s" % (self.campaign.priority, self.campaign.get_priority_display())
-   get_campaign_satus.short_description = u'Статус кампании'
-   get_campaign_satus.allow_tags = True
+    def __unicode__(self):
+        return self.name
 
-   def ctr(self):
-      if self.shows != 0:
-         c = str(float(self.clicks)/float(self.shows)*100.)
-         return c[:c.rfind('.')+3]
-      else:
-         return u"-"
-   ctr.short_description = u'CTR'
+class Placement(models.Model):
+    banner = models.ForeignKey(Banner, verbose_name=u"баннер")
+    zones = models.ManyToManyField(Zone, verbose_name=u"зоны", related_name="zones")
+    frequency = models.PositiveIntegerField(u"частота", help_text="чем больше частота, тем чаще баннер будет показываться", blank=False, null=False, default=1)
+    
+    # Статистика
+    clicks = models.PositiveIntegerField(u"Кликов", blank=True, default=0)
+    shows  = models.PositiveIntegerField(u"Показов", blank=True, default=0)
+    # Ограничения
+    max_clicks = models.PositiveIntegerField(u"Лимит кликов", blank=True, default=0, null=False, help_text=u"0 - лимит не ограничен")
+    max_shows  = models.PositiveIntegerField(u"Лимит показов", blank=True, default=0, null=False, help_text=u"0 - лимит не ограничен")
+    begin_date = models.DateTimeField(u"Дата начала", null=True, blank=True)
+    end_date = models.DateTimeField(u"Дата окончания", null=True, blank=True)
 
-   def __unicode__(self):
-      return self.name
+    class Meta(object):
+        verbose_name = u"размещение"
+        verbose_name_plural = u"размещения"
+        ordering = ["banner__name"]
+
+    def get_status(self):
+        # Не активен
+        if (self.max_clicks != 0 and self.max_clicks <= self.clicks) or \
+           (self.max_shows != 0 and self.max_shows <= self.shows) or \
+           (self.begin_date and self.begin_date > dt.now()) or \
+           (self.end_date and self.end_date < dt.now()): return u"<span style=\"color:#ccc;\">Неактивен</span>"
+        return u"<span style=\"color:green;\">Активен</span>"
+    get_status.short_description = u"Статус"
+    get_status.allow_tags = True
+
+    def get_zones(self):
+        zones = u"<ul>"
+        for zone in self.zones.all():
+            zones += u"<li>* %s</li>" % zone.name
+        zones += "</ul>"
+        return zones
+    get_zones.short_description = u"Зоны"
+    get_zones.allow_tags = True
+    
+
+    def __unicode__(self):
+        return self.banner.name

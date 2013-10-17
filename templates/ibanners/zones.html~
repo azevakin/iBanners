@@ -1,0 +1,3 @@
+<!--beginbanner-->
+{% if banner_code %}{{ html_pre_banner|safe }}{{ banner_code|safe }}{{ html_after_banner|safe }}{{ html_after_banner|safe }}{% endif %}
+<!--endbanner-->

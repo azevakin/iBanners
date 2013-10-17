@@ -1,60 +1,53 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from django import forms
-from iBanners.models import Zone, Client, Banner, Campaign
+from banners.models import Zone, Banner,  Placement
+
+#admin.site.disable_action('delete_selected')
 
 class ZoneAdmin(admin.ModelAdmin):
-   list_display = ('get_site','id','name','description','price')
-   list_filter = ('site',)
-
-class ClientAdmin(admin.ModelAdmin):
-   list_per_page = 30
-   list_display = ('name','contact','email')
-   search_fields = ('name','contact')
+    list_display = ("name", "english_name")
+    list_per_page = 30
 
 class BannerAdmin(admin.ModelAdmin):
-   list_per_page = 30
-   list_display = ('id', 'name','campaign','get_banner_zones','banner_type','shows','clicks','ctr')
-   raw_id_fields = ('campaign',)
-   fieldsets = (
-      (u"Базовые настройки", {
-         'classes': ('wide',),
-         'fields': ('campaign','zones','banner_type', 'name','foreign_url','comment')
-      }),
-      (u"Баннер", {
-         'classes': ('wide',),
-         'fields': ('swf_file','img_file','alt','html_text')
-      }),
-      (u"Размеры", {
-         'classes': ('wide'),
-         'fields': ('width', 'height')
-      }),
-      (u"Статистика", {
-         'classes': ('wide',),
-         'fields': ('clicks','shows')
-      }),
-      (u"Ограничения", {
-         'classes': ('wide',),
-         'fields': ('max_clicks','max_shows','begin_date','end_date','var')
-      }),
-   )
-   search_fields = ('name','campaign__name','campaign__client__name', 'comment', 'html_text')
-   list_display_links = ('name',)
+    fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('name', 'banner_type',)
+        }),
+        (u"Параметры", {
+            'classes': ('wide',),
+            'fields': ('foreign_url', 'width', 'height')
+        }),
+        (None, {
+            'classes': ('wide',),
+            'fields': ('swf_file', 'img_file', 'html_text')
+        })
+    )
+    list_display = ("name", "banner_type", "width", "height")
+    list_per_page = 30
 
+class PlacementAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('banner', 'zones', 'frequency')
+        }),
+        (u"Клики", {
+            'classes': ('wide',),
+            'fields': ('clicks', 'max_clicks')
+        }),
+        (u"Показы", {
+            'classes': ('wide',),
+            'fields': ('shows', 'max_shows')
+        }),
+        (u"Период размещения", {
+            'classes': ('wide',),
+            'fields': ('begin_date', 'end_date')
+        })
+    )
+    search_fields = ("banner__name",)
+    list_display = ( "banner", "get_zones", "frequency", "clicks", "max_clicks", "shows", "max_shows", "begin_date", "end_date", "get_status")
 
-class CampaignAdmin(admin.ModelAdmin):
-   list_display = ('client','name','priority','begin_date','end_date')
-   list_filter = ('priority',)
-   search_fields = ('client__name', 'name')
-   date_hierarchy = 'end_date'
-   raw_id_fields = ('client',)
-
-class XCampaignAdmin(admin.ModelAdmin):
-   list_display = ('client','name','priority','begin_date','end_date')
-   list_filter = ('priority',)
-
-
-admin.site.register(Zone, ZoneAdmin)
-admin.site.register(Client, ClientAdmin)
 admin.site.register(Banner, BannerAdmin)
-admin.site.register(Campaign, CampaignAdmin)
+admin.site.register(Zone, ZoneAdmin)
+admin.site.register(Placement, PlacementAdmin)
